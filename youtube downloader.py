@@ -5,9 +5,7 @@ import subprocess
 import json
 import datetime
 import time 
-import json 
 import threading
-import random
 import gc
 import itertools
 
@@ -61,27 +59,28 @@ def execution(sema, folder, link):
 
     sema.release()
 
-with open('sources.json', 'r') as jsonRaw:
-    jsonDat =  json.load(jsonRaw)
+if __name__ == "__main__":
+    with open('sources.json', 'r') as jsonRaw:
+        jsonDat =  json.load(jsonRaw)
 
-    process_list = []
-    #shuffle_list = random.shuffle(list(jsonDat.keys()))
-    """
-    while not len(list(jsonDat.keys())) == 0:
-        folder = list(jsonDat.keys())[0]
-        if len(process_list) < 4:
-            link = jsonDat[folder]
-            process_list.append(str(random.randint(0,999)))
-            p = threading.Thread(target=execution, args = (sema, folder, link), name=process_list[len(process_list)-1])
-            p.daemon = True
-            process_list[len(process_list)-1] = p
-            print(p)
+        process_list = []
+        #shuffle_list = random.shuffle(list(jsonDat.keys()))
+        """
+        while not len(list(jsonDat.keys())) == 0:
+            folder = list(jsonDat.keys())[0]
+            if len(process_list) < 4:
+                link = jsonDat[folder]
+                process_list.append(str(random.randint(0,999)))
+                p = threading.Thread(target=execution, args = (sema, folder, link), name=process_list[len(process_list)-1])
+                p.daemon = True
+                process_list[len(process_list)-1] = p
+                print(p)
+                p.start()
+                jsonDat.pop(folder)
+                #process_list[:] = [itertools.filterfalse(, process_list)]
+        """
+
+        sema = threading.Semaphore(4)
+        for a in jsonDat:
+            p = threading.Thread(target=execution, args = (sema, a, jsonDat[a]), name=a)
             p.start()
-            jsonDat.pop(folder)
-            #process_list[:] = [itertools.filterfalse(, process_list)]
-    """
-
-    sema = threading.Semaphore(4)
-    for a in jsonDat:
-        p = threading.Thread(target=execution, args = (sema, a, jsonDat[a]), name=a)
-        p.start()
