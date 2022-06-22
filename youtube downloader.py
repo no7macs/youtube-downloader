@@ -1,5 +1,7 @@
+from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
+import youtube_dl
 import os
 import subprocess
 import json
@@ -17,15 +19,29 @@ def execution(sema, folder, link):
     os.makedirs(f"""./{folder}""", exist_ok=True)
     os.makedirs(f"""./{folder}/temp""", exist_ok=True)
     os.makedirs(f"""./{folder}/webm""", exist_ok=True)
+    os.makedirs(f"""./{folder}/mp4""", exist_ok=True)
+    with open(f"""./{folder}/archive.txt""", mode='a'): pass
+
+    ydl_opts = {
+                'format': 'bestvideo+bestaudio',
+                'outtmpl':f"""{folder}/%(title)s-%(id)s.%(ext)s""",
+                'download_archive':f'./{folder}/archive.txt',
+                'cookiefile':'./youtube.com_cookies.txt',
+                'merge_output_format':'mkv'
+                }       
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([link])
 
     # download all videos
-    #--merge-output-format mkv --all-subs --write-description --write-info-json --write-annotations --all-subs --write-all-thumbnails
-    #--embed-subs --embed-thumbnail --add-metadata --prefer-ffmpeg
+    #--all-subs --write-description --write-info-json --write-annotations --all-subs --write-all-thumbnails
+    #--embed-subs --embed-thumbnail --prefer-ffmpeg
     #-x -c -k
-    os.system(f"""youtube-dl -f bestvideo+bestaudio -o "{folder}/%(title)s-%(id)s.%(ext)s" --add-metadata --embed-subs \
-    --cookies "./youtube.com_cookies.txt" --merge-output-format mkv \
-    "{link}" """)
+    #os.system(f"""youtube-dl -f bestvideo+bestaudio -o "{folder}/%(title)s-%(id)s.%(ext)s" --add-metadata --embed-subs \
+    #--cookies "./youtube.com_cookies.txt" --merge-output-format mkv \
+    #"{link}" """)
     gc.collect()
+
+    sema.release()
 
     # make webm
     files = os.listdir(f"""./{folder}/""")
@@ -43,9 +59,10 @@ def execution(sema, folder, link):
                 full_file_path = f"""./{folder}/{a}"""
                 #{(os.path.getsize(full_file_path)*1024)/date_time_obj.second}
                 try:
+                    #webm
                     os.system(f"""ffmpeg -i "{full_file_path}" -c:v libvpx -b:v {(5243000)/date_time_obj.second} -pass 1 -an -f -n  "./{folder}/temp/" """)
                     os.system(f"""ffmpeg -i "{full_file_path}" -c:v libvpx -b:v {(5243000)/date_time_obj.second} -preset veryslow -pass 2 -c:a libopus -n "./{folder}/webm/{os.path.splitext(a)[0]}.webm" """)
-                    time.sleep(2)
+                    #mp4
                 except Exception as error:
                     print("ffmpeg webm encode error \n" + str(error))
                     os.remove(full_file_path)
@@ -56,8 +73,6 @@ def execution(sema, folder, link):
     for b in webmFiles:
         if os.path.getsize(f"./{folder}/webm/{b}") >= (1024*1024)*6:
             os.remove(f"""./{folder}/webm/{b}""")
-
-    sema.release()
 
 if __name__ == "__main__":
     with open('sources.json', 'r') as jsonRaw:
@@ -80,7 +95,7 @@ if __name__ == "__main__":
                 #process_list[:] = [itertools.filterfalse(, process_list)]
         """
 
-        sema = threading.Semaphore(4)
+        sema = threading.Semaphore(8)
         for a in jsonDat:
             p = threading.Thread(target=execution, args = (sema, a, jsonDat[a]), name=a)
             p.start()
