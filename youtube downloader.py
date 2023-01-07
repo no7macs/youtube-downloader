@@ -44,8 +44,12 @@ def execution(sema, folder, link, processInfo):
                 'progress_hooks': [progressHook],
                 }
     # download videos
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([link])
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([link])
+    except:
+        processInfo[2]["error"] = "youtube-dl crashed and burned"
+        execution(sema, folder, link, processInfo)
     # release sema, garbage collect
     sema.release()
     gc.collect()
@@ -76,13 +80,14 @@ if __name__ == "__main__":
                         f"""    {process_list[b][1]["filename"]}\r\n""",
                         f"""    {process_list[b][1]["_percent_str"]}\r\n""",
                         f"""    {process_list[b][1]["_speed_str"]}\r\n""",
-                        f"""    {process_list[b][1]["_eta_str"]}\r\n"""
+                        f"""    {process_list[b][1]["_eta_str"]}\r\n""",
+                        f"""{process_list[b][2]["error"]}\r\n"""
                     ])
                 else:
-                    sys.stdout.write("Starting downloads...")
+                    sys.stdout.write("Starting downloads...\r\n")
 
         else: 
-            sys.stdout.write("Starting first process...")
+            sys.stdout.write("Starting first process...\r\n")
 
         sys.stdout.write(terminalOut)
         time.sleep(0.5)
