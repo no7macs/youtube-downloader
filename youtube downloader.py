@@ -24,13 +24,13 @@ def execution(sema, folder, link, processInfo):
     # progress and current download info
     def progressHook(d):
         processInfo[1] = d
-
+    # make extra sub directories
     os.makedirs(f"""./{folder}""", exist_ok=True)
     os.makedirs(f"""./{folder}/temp""", exist_ok=True)
     os.makedirs(f"""./{folder}/webm""", exist_ok=True)
     os.makedirs(f"""./{folder}/mp4""", exist_ok=True)
     with open(f"""./{folder}/archive.txt""", mode='a'): pass
-
+    # youtube-dl confis
     ydl_opts = {
                 'format': 'bestvideo+bestaudio',
                 'outtmpl':f"""{folder}/%(title)s-%(id)s.%(ext)s""",
@@ -41,10 +41,13 @@ def execution(sema, folder, link, processInfo):
                 'logger': YTDLLLogger(processInfo),
                 'progress_hooks': [progressHook],
                 }
+    # download videos
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([link])
+    # release sema, garbage collect
     sema.release()
     gc.collect()
+    
     # remove big webm
     webmFiles = os.listdir(f"""./{folder}/webm/""")
     for b in webmFiles:
@@ -60,4 +63,5 @@ if __name__ == "__main__":
             process_list[a] = [False, {}, {"debug":"", "warning":"", "error":""}]
             p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
             p.start()
+
         gc.collect()
