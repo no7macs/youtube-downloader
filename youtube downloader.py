@@ -7,21 +7,23 @@ import json
 import threading
 import gc
 
-class YTDLLLogger(object):
-    def debug(self, msg):
-        pass
-    def warning(self, msg):
-        pass
-    def error(self, msg):
-        print(msg)
-
 def execution(sema, folder, link, processInfo):
+    # get sema and mark running value as true
     sema.acquire()
-
+    processInfo[0] = True
+    # class for logging the YTDL outputs
+    class YTDLLLogger(object):
+        def __init__(self, processInfo):
+            self.processInfo = processInfo
+        def debug(self, msg):
+            self.processInfo[2]["debug"] = msg
+        def warning(self, msg):
+            self.processInfo[2]["warning"] = msg
+        def error(self, msg):
+            self.processInfo[2]["error"] = msg
+    # progress and current download info
     def progressHook(d):
-        processInfo[0] = d
-
-    print("Starting, " + folder)
+        processInfo[1] = d
 
     os.makedirs(f"""./{folder}""", exist_ok=True)
     os.makedirs(f"""./{folder}/temp""", exist_ok=True)
@@ -36,17 +38,13 @@ def execution(sema, folder, link, processInfo):
                 'cachedir':f"""./{folder}/cache""",
                 'cookiefile':'./youtube.com_cookies.txt',
                 'merge_output_format':'mkv',
-
-                'logger': YTDLLLogger(),
+                'logger': YTDLLLogger(processInfo),
                 'progress_hooks': [progressHook],
                 }
-      
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([link])
-
     sema.release()
     gc.collect()
-
     # remove big webm
     webmFiles = os.listdir(f"""./{folder}/webm/""")
     for b in webmFiles:
@@ -59,7 +57,7 @@ if __name__ == "__main__":
             process_list = {}
         sema = threading.Semaphore(8)
         for a in jsonDat:
-            process_list[a] = [{}]
+            process_list[a] = [False, {}, {"debug":"", "warning":"", "error":""}]
             p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
             p.start()
         gc.collect()
