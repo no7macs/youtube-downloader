@@ -3,17 +3,24 @@ from concurrent.futures import process
 from logging import exception
 import youtube_dl
 import os
-import subprocess
 import json
-import datetime
-import time 
 import threading
 import gc
-import itertools
 
-def execution(sema, folder, link):
+class YTDLLLogger(object):
+    def debug(self, msg):
+        pass
+    def warning(self, msg):
+        pass
+    def error(self, msg):
+        print(msg)
 
+def execution(sema, folder, link, processInfo):
     sema.acquire()
+
+    def progressHook(d):
+        processInfo[0] = d
+
     print("Starting, " + folder)
 
     os.makedirs(f"""./{folder}""", exist_ok=True)
@@ -28,23 +35,14 @@ def execution(sema, folder, link):
                 'download_archive':f'./{folder}/archive.txt',
                 'cachedir':f"""./{folder}/cache""",
                 'cookiefile':'./youtube.com_cookies.txt',
-                'merge_output_format':'mkv'
+                'merge_output_format':'mkv',
+
+                'logger': YTDLLLogger(),
+                'progress_hooks': [progressHook],
                 }
-    try:       
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
-    except:
-        execution(sema, folder, link)
-
-
-    # download all videos
-    #--all-subs --write-description --write-info-json --write-annotations --all-subs --write-all-thumbnails
-    #--embed-subs --embed-thumbnail --prefer-ffmpeg
-    #-x -c -k
-    #os.system(f"""youtube-dl -f bestvideo+bestaudio -o "{folder}/%(title)s-%(id)s.%(ext)s" --add-metadata --embed-subs \
-    #--cookies "./youtube.com_cookies.txt" --merge-output-format mkv \
-    #"{link}" """)
-    gc.collect()
+      
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([link])
 
     sema.release()
     gc.collect()
@@ -56,29 +54,12 @@ def execution(sema, folder, link):
             os.remove(f"""./{folder}/webm/{b}""")
 
 if __name__ == "__main__":
-    while True:
         with open('sources.json', 'r') as jsonRaw:
             jsonDat =  json.load(jsonRaw)
-
-            process_list = []
-            #shuffle_list = random.shuffle(list(jsonDat.keys()))
-            """
-            while not len(list(jsonDat.keys())) == 0:
-                folder = list(jsonDat.keys())[0]
-                if len(process_list) < 4:
-                    link = jsonDat[folder]
-                    process_list.append(str(random.randint(0,999)))
-                    p = threading.Thread(target=execution, args = (sema, folder, link), name=process_list[len(process_list)-1])
-                    p.daemon = True
-                    process_list[len(process_list)-1] = p
-                    print(p)
-                    p.start()
-                    jsonDat.pop(folder)
-                    #process_list[:] = [itertools.filterfalse(, process_list)]
-            """
-
-            sema = threading.Semaphore(8)
-            for a in jsonDat:
-                p = threading.Thread(target=execution, args = (sema, a, jsonDat[a]), name=a)
-                p.start()
+            process_list = {}
+        sema = threading.Semaphore(8)
+        for a in jsonDat:
+            process_list[a] = [{}]
+            p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
+            p.start()
         gc.collect()
