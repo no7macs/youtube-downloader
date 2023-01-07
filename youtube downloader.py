@@ -6,6 +6,8 @@ import os
 import json
 import threading
 import gc
+import sys
+import time
 
 def execution(sema, folder, link, processInfo):
     # get sema and mark running value as true
@@ -47,7 +49,7 @@ def execution(sema, folder, link, processInfo):
     # release sema, garbage collect
     sema.release()
     gc.collect()
-    
+
     # remove big webm
     webmFiles = os.listdir(f"""./{folder}/webm/""")
     for b in webmFiles:
@@ -55,13 +57,34 @@ def execution(sema, folder, link, processInfo):
             os.remove(f"""./{folder}/webm/{b}""")
 
 if __name__ == "__main__":
-        with open('sources.json', 'r') as jsonRaw:
-            jsonDat =  json.load(jsonRaw)
-            process_list = {}
-        sema = threading.Semaphore(8)
-        for a in jsonDat:
-            process_list[a] = [False, {}, {"debug":"", "warning":"", "error":""}]
-            p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
-            p.start()
+    with open('sources.json', 'r') as jsonRaw:
+        jsonDat =  json.load(jsonRaw)
+        process_list = {}
+    sema = threading.Semaphore(8)
+    for a in jsonDat:
+        process_list[a] = [False, {}, {"debug":"", "warning":"", "error":""}]
+        p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
+        p.start()
+    while True:
+        #print(process_list["Action Movie FX"][1])
+        terminalOut = ""
+        if len(process_list) > 0:
+            for b in process_list:
+                if len(process_list[b][1]) > 0 and (not process_list[b][1]["status"] == 'finished'):
+                    terminalOut += ''.join([
+                        f"""{b}\r\n""",
+                        f"""    {process_list[b][1]["filename"]}\r\n""",
+                        f"""    {process_list[b][1]["_percent_str"]}\r\n""",
+                        f"""    {process_list[b][1]["_speed_str"]}\r\n""",
+                        f"""    {process_list[b][1]["_eta_str"]}\r\n"""
+                    ])
+                else:
+                    sys.stdout.write("Starting downloads...")
 
-        gc.collect()
+        else: 
+            sys.stdout.write("Starting first process...")
+
+        sys.stdout.write(terminalOut)
+        time.sleep(0.5)
+        sys.stdout.flush()
+        os.system('cls')
