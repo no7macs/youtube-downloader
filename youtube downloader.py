@@ -9,6 +9,8 @@ import gc
 import sys
 import time
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
 def execution(sema, folder, link, processInfo):
     # get sema and mark running value as true
     sema.acquire()
@@ -33,11 +35,12 @@ def execution(sema, folder, link, processInfo):
     os.makedirs(f"""./{folder}/mp4""", exist_ok=True)
     with open(f"""./{folder}/archive.txt""", mode='a'): pass
     # youtube-dl confis
+    outDir = dir_path
     ydl_opts = {
                 'format': 'bestvideo+bestaudio',
-                'outtmpl':f"""{folder}/%(title)s-%(id)s.%(ext)s""",
-                'download_archive':f'./{folder}/archive.txt',
-                'cachedir':f"""./{folder}/cache""",
+                'outtmpl':f"""{outDir}/{folder}/%(title)s-%(id)s.%(ext)s""",
+                'download_archive':f'{outDir}/{folder}/archive.txt',
+                'cachedir':f"""{outDir}/{folder}/cache""",
                 'cookiefile':'./youtube.com_cookies.txt',
                 'merge_output_format':'mkv',
                 'logger': YTDLLLogger(processInfo),
@@ -61,10 +64,11 @@ def execution(sema, folder, link, processInfo):
             os.remove(f"""./{folder}/webm/{b}""")
 
 if __name__ == "__main__":
-    with open('sources.json', 'r') as jsonRaw:
+    semaphoreSize = 8
+    with open(dir_path + '/sources.json', 'r') as jsonRaw:
         jsonDat =  json.load(jsonRaw)
         process_list = {}
-    sema = threading.Semaphore(8)
+    sema = threading.Semaphore(semaphoreSize)
     for a in jsonDat:
         process_list[a] = [False, {}, {"debug":"", "warning":"", "error":""}]
         p = threading.Thread(target=execution, args = (sema, a, jsonDat[a], process_list[a]), name=a)
@@ -85,10 +89,8 @@ if __name__ == "__main__":
                     ])
                 else:
                     sys.stdout.write("Starting downloads...\r\n")
-
         else: 
             sys.stdout.write("Starting first process...\r\n")
-
         sys.stdout.write(terminalOut)
         time.sleep(0.5)
         sys.stdout.flush()
