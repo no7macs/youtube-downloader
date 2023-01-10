@@ -74,7 +74,6 @@ class processListManager():
         self.processThreadLock = threading.Lock()
         # processNum, sourceName, semaStatus, urlLoc, YTDLStatus, logMessages(debug, warning, error)
         self.processList: list = []
-        self.processListHeaders: list = ["Process Number", "Process Name", "Running", "Link", "Status"]
         self.processNum = 0
         self.processListCache: dict = {"id":{}, "name":{}, "semaStatus":{"True":[], "False":[]}}
         gc.collect()
@@ -104,22 +103,10 @@ class processListManager():
         with self.processThreadLock:
             return(len(self.processList))
 
-    def getFullProcessList(self, normalize) -> list:
+    def getFullProcessList(self) -> list:
         with self.processThreadLock:
             for a in self.processList:
-                if normalize:
-                    tmpProcess = list(a)
-                    for b, c in enumerate(a):
-                        if not type(c) == str():
-                            tmpProcess[b] = str(c)
-                else:
-                    tmpProcess = a
-                yield(tmpProcess)
-
-    def getProcessListHeader(self) -> str:
-        return(self.processListHeaders)
-        #for a in self.processListHeaders:
-        #    yield(a)
+                yield(a)
 
     def getProcessById(self, processId: int) -> list:
         return(self.processList[self.processListCache["id"][processId]])
@@ -145,14 +132,16 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
+
 class mainWindow(App):
     def compose(self) -> ComposeResult:
         yield DataTable()
     
     def on_mount(self) -> None:
         table = self.query_one(DataTable)
-        rows = processManager.getFullProcessList(normalize = True)
-        table.add_columns(*processManager.getProcessListHeader())
+        rows = processManager.getFullProcessList()
+        processListHeaders: list = ["Process Number", "Process Name", "Running", "Link", ]
+        table.add_columns(*processListHeaders)
         table.add_rows(rows)
 
 if __name__ == "__main__":
