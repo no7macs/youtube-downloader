@@ -13,7 +13,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def execution(sema, processId, processManager):
     # get sema and mark running value as true
-    print("startedthread")
     sema.acquire()
     processManager.setProcessSemaStatus(processId, True)
     '''
@@ -23,8 +22,6 @@ def execution(sema, processId, processManager):
         processManager.setProcessSemaStatus(processId, True)
     else: pass
     '''
-
-    print("semaaquaired")
     # class for logging the YTDL outputs
     class YTDLLLogger(object):
         def __init__(self, processId) -> None:
@@ -56,14 +53,8 @@ def execution(sema, processId, processManager):
                 'progress_hooks': [progressHook],
                 }
     # download videos
-    print("runningytdl")
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([processManager.getProcessById(processId)[3]])
-    #except:
-    #    processManager.setLogMessage(processId, "error", "youtube-dl crashed and burned")
-    #    execution(sema, processId, processManager)
-
-    # release sema, garbage collect
     sema.release()
     gc.collect()
 
@@ -127,7 +118,6 @@ class processListManager():
         with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[2] = semaStatus
-            print("set sema status\n")
 
     def setLogMessage(self, processId: int, msg: str, body: str) -> None:
         with self.processThreadLock:
@@ -151,26 +141,20 @@ if __name__ == "__main__":
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
 
-    while True:
-        time.sleep(1)
-        for d in (procList := processManager.getFullProcessList()):
-            print(procList[c][4])    
-
-    '''
     # horrid TUI that NEEDS TO DIE ASAP
     while True:
         #print(process_list["Action Movie FX"][1])
         terminalOut = ""
-        if len(process_list) > 0:
-            for b in process_list:
-                if len(process_list[b][1]) > 0 and (not process_list[b][1]["status"] == 'finished'):
+        if processManager.getProcessNum() > 0:
+            for b in (process_list:=processManager.getFullProcessList()):
+                if len(b[4]) > 0 and (not b[4]["status"] == 'finished'):
                     terminalOut += ''.join([
-                        f"""{b}\r\n""",
-                        f"""    {process_list[b][1]["filename"]}\r\n""",
-                        f"""    {process_list[b][1]["_percent_str"]}\r\n""",
-                        f"""    {process_list[b][1]["_speed_str"]}\r\n""",
-                        f"""    {process_list[b][1]["_eta_str"]}\r\n""",
-                        f"""{process_list[b][2]["error"]}\r\n"""
+                        f"""{b[1]}\r\n""",
+                        f"""    {b[4]["filename"]}\r\n""",
+                        f"""    {b[4]["_percent_str"]}\r\n""",
+                        f"""    {b[4]["_speed_str"]}\r\n""",
+                        f"""    {b[4]["_eta_str"]}\r\n""",
+                        f"""{b[5]["error"]}\r\n"""
                     ])
                 else:
                     sys.stdout.write("Starting downloads...\r\n")
@@ -180,4 +164,3 @@ if __name__ == "__main__":
         time.sleep(0.5)
         sys.stdout.flush()
         os.system('cls')
-    '''
