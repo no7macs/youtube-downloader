@@ -74,6 +74,7 @@ class processListManager():
         self.processThreadLock = threading.Lock()
         # processNum, sourceName, semaStatus, urlLoc, YTDLStatus, logMessages(debug, warning, error)
         self.processList: list = []
+        self.processListHeaders: list = ["Process Number", "Process Name", "Running", "Link", "Status"]
         self.processNum = 0
         self.processListCache: dict = {"id":{}, "name":{}, "semaStatus":{"True":[], "False":[]}}
         gc.collect()
@@ -103,9 +104,22 @@ class processListManager():
         with self.processThreadLock:
             return(len(self.processList))
 
-    def getFullProcessList(self) -> list:
+    def getFullProcessList(self, normalize) -> list:
         with self.processThreadLock:
-            return(self.processList)
+            for a in self.processList:
+                if normalize:
+                    tmpProcess = list(a)
+                    for b, c in enumerate(a):
+                        if not type(c) == str():
+                            tmpProcess[b] = str(c)
+                else:
+                    tmpProcess = a
+                yield(tmpProcess)
+
+    def getProcessListHeader(self) -> str:
+        return(self.processListHeaders)
+        #for a in self.processListHeaders:
+        #    yield(a)
 
     def getProcessById(self, processId: int) -> list:
         return(self.processList[self.processListCache["id"][processId]])
@@ -131,6 +145,15 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
+class mainWindow(App):
+    def compose(self) -> ComposeResult:
+        yield DataTable()
+    
+    def on_mount(self) -> None:
+        table = self.query_one(DataTable)
+        rows = processManager.getFullProcessList(normalize = True)
+        table.add_columns(*processManager.getProcessListHeader())
+        table.add_rows(rows)
 
 if __name__ == "__main__":
     semaphoreSize = 8
@@ -144,26 +167,5 @@ if __name__ == "__main__":
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
 
-    # horrid TUI that NEEDS TO DIE ASAP
-    while True:
-        #print(process_list["Action Movie FX"][1])
-        terminalOut = ""
-        if processManager.getProcessNum() > 0:
-            for b in (process_list:=processManager.getFullProcessList()):
-                if len(b[4]) > 0 and (not b[4]["status"] == 'finished'):
-                    terminalOut += ''.join([
-                        f"""{b[1]}\r\n""",
-                        f"""    {b[4]["filename"]}\r\n""",
-                        f"""    {b[4]["_percent_str"]}\r\n""",
-                        f"""    {b[4]["_speed_str"]}\r\n""",
-                        f"""    {b[4]["_eta_str"]}\r\n""",
-                        f"""{b[5]["error"]}\r\n"""
-                    ])
-                else:
-                    sys.stdout.write("Starting downloads...\r\n")
-        else: 
-            sys.stdout.write("Starting first process...\r\n")
-        sys.stdout.write(terminalOut)
-        time.sleep(0.5)
-        sys.stdout.flush()
-        os.system('cls')
+    app = mainWindow()
+    app.run()
