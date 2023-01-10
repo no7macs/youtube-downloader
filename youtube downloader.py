@@ -13,10 +13,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def execution(sema, processId, processManager):
     # get sema and mark running value as true
+    print("startedthread")
+    sema.acquire()
+    processManager.setProcessSemaStatus(processId, True)
+    '''
     if processManager.getProcessById(processId)[2] == False:
+        print("checkingsema")
         sema.acquire()
         processManager.setProcessSemaStatus(processId, True)
     else: pass
+    '''
+
+    print("semaaquaired")
     # class for logging the YTDL outputs
     class YTDLLLogger(object):
         def __init__(self, processId) -> None:
@@ -30,7 +38,7 @@ def execution(sema, processId, processManager):
     # progress and current download info
     folder = processManager.getProcessById(processId)[1]
     def progressHook(d):
-        processManager.setProcessStatus(d)
+        processManager.setProcessStatus(processId, body = d)
     # make extra sub directories
     os.makedirs(f"""{dir_path}/{folder}""", exist_ok=True)
     os.makedirs(f"""{dir_path}/{folder}/temp""", exist_ok=True)
@@ -48,12 +56,13 @@ def execution(sema, processId, processManager):
                 'progress_hooks': [progressHook],
                 }
     # download videos
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download(processManager.getProcessById(processId)[3])
-    except:
-        processManager.setLogMessage(processId, "error", "youtube-dl crashed and burned")
-        execution(sema, processId, processManager)
+    print("runningytdl")
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([processManager.getProcessById(processId)[3]])
+    #except:
+    #    processManager.setLogMessage(processId, "error", "youtube-dl crashed and burned")
+    #    execution(sema, processId, processManager)
+
     # release sema, garbage collect
     sema.release()
     gc.collect()
@@ -77,7 +86,7 @@ class processListManager():
         gc.collect()
 
     def buildProcessList(self, sourcesFileLoc: str) -> None:
-        while self.processThreadLock:
+        with self.processThreadLock:
             self.processList = []
             self.processNum = 0
             with open(sourcesFileLoc, 'r') as jsonRaw:
@@ -85,10 +94,9 @@ class processListManager():
             for a in jsonDat:
                 self.processNum += 1
                 self.processList.append([self.processNum, a, False, jsonDat[a], {}, {"debug":"", "warning":"", "error":""}])
-            break
 
     def cacheProcessList(self) -> None:
-        while self.processThreadLock:
+        with self.processThreadLock:
             self.processListCache = {"id":{}, "name":{}, "semaStatus":{"True":[], "False":[]}}
             for a, b in enumerate(self.processList):
                 self.processListCache["name"][b[1]] = a
@@ -97,13 +105,14 @@ class processListManager():
             #by json dat
             #by ytdl status
             #by error codes
-            break
     
     def getProcessNum(self) -> int:
-        return(len(self.processList))
+        with self.processThreadLock:
+            return(len(self.processList))
 
     def getFullProcessList(self) -> list:
-        return(self.processList)
+        with self.processThreadLock:
+            return(self.processList)
 
     def getProcessById(self, processId: int) -> list:
         return(self.processList[self.processListCache["id"][processId]])
@@ -115,17 +124,18 @@ class processListManager():
         return(self.processList[self.processListCache["name"][name]])
 
     def setProcessSemaStatus(self, processId: int, semaStatus: bool) -> None:
-        while self.processThreadLock:
+        with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[2] = semaStatus
+            print("set sema status\n")
 
     def setLogMessage(self, processId: int, msg: str, body: str) -> None:
-        while self.processThreadLock:
+        with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[5][msg] = body
     
     def setProcessStatus(self, processId: int, body: str) -> None:
-        while self.processThreadLock:
+        with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
@@ -142,6 +152,7 @@ if __name__ == "__main__":
         p.start()
 
     while True:
+        time.sleep(1)
         for d in (procList := processManager.getFullProcessList()):
             print(procList[c][4])    
 
