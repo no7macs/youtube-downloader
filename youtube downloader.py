@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
+from textual.app import App, ComposeResult
+from textual.widgets import Static, DataTable
 import youtube_dl
 import os
 import json
@@ -128,6 +130,7 @@ class processListManager():
         with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
+
 
 if __name__ == "__main__":
     semaphoreSize = 8
