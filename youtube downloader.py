@@ -1,8 +1,6 @@
 from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
-from textual.app import App, ComposeResult
-from textual.widgets import Static, DataTable
 import youtube_dl
 import os
 import json
@@ -14,6 +12,7 @@ import time
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def execution(sema, processId, processManager):
+    time.sleep(5)
     # get sema and mark running value as true
     sema.acquire()
     processManager.setProcessSemaStatus(processId, True)
@@ -49,6 +48,7 @@ def execution(sema, processId, processManager):
                 'outtmpl':f"""{outDir}/{folder}/%(title)s-%(id)s.%(ext)s""",
                 'download_archive':f'{outDir}/{folder}/archive.txt',
                 'cachedir':f"""{outDir}/{folder}/cache""",
+                'write-description':True,
                 'cookiefile':'./youtube.com_cookies.txt',
                 'merge_output_format':'mkv',
                 'logger': YTDLLLogger(processId),
@@ -133,18 +133,8 @@ class processListManager():
             workingProcess[4] = body
 
 
-class mainWindow(App):
-    def compose(self) -> ComposeResult:
-        yield DataTable()
-    
-    def on_mount(self) -> None:
-        table = self.query_one(DataTable)
-        rows = processManager.getFullProcessList()
-        processListHeaders: list = ["Process Number", "Process Name", "Running", "Link", ]
-        table.add_columns(*processListHeaders)
-        table.add_rows(rows)
-
 if __name__ == "__main__":
+
     semaphoreSize = 8
     processManager = processListManager()
     processManager.buildProcessList(dir_path + '/sources.json')
@@ -155,6 +145,3 @@ if __name__ == "__main__":
         processId = processManager.getProcessByIndex(c)[0]
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
-
-    app = mainWindow()
-    app.run()
