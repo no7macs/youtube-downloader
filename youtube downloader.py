@@ -1,13 +1,14 @@
 from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
 import youtube_dl
 import os
 import json
 import threading
 import gc
-import sys
-import time
+import asyncio
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -75,6 +76,32 @@ def execution(sema, processId, processManager):
     '''
 
 
+class httpServer(BaseHTTPRequestHandler):
+    def _set_response(self, code) -> None:
+        self.send_response(code)
+        self.send_header('Content-type', 'text/json')
+        self.end_headers()
+        
+    def do_GET(self):
+        #self._set_response()
+        print()
+        path = urlparse(self.path).path
+        try:
+            if path[1:4] == "get":
+                tempFunc = getattr(processManager, path[1:])
+            else:
+                raise AttributeError("not a getter")
+        except AttributeError as err:
+            self._set_response(400)
+            print(err)
+        attributeQuery = parse_qs(urlparse(self.path).query)
+        if "processId" in attributeQuery:
+            attributeQuery["processId"] = int(attributeQuery["processId"][0])
+        getReturn = tempFunc(**attributeQuery)
+        self._set_response(200)
+        self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
+
+
 class processListManager():
     def __init__(self) -> None:
         self.processThreadLock = threading.Lock()
@@ -138,15 +165,20 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
-
 if __name__ == "__main__":
     semaphoreSize = 8
     processManager = processListManager()
     processManager.buildProcessList(dir_path + '/sources.json')
     processManager.cacheProcessList()
+    
     # start all threads
     sema = threading.Semaphore(semaphoreSize)
     for c in range(0, processManager.getProcessNum()):
         processId = processManager.getProcessByIndex(c)[0]
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
+
+    hostName = "localhost"
+    serverPort = 8000
+    httpBackend = HTTPServer((hostName, serverPort), httpServer)
+    httpBackend.serve_forever()
