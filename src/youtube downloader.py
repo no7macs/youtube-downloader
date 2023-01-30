@@ -86,6 +86,7 @@ class httpServer(BaseHTTPRequestHandler):
         #self._set_response()
         print()
         path = urlparse(self.path).path
+        # make sure it's a getter function and get it, other wirse throw an error and return a 400 code
         try:
             if path[1:4] == "get":
                 tempFunc = getattr(processManager, path[1:])
@@ -94,9 +95,22 @@ class httpServer(BaseHTTPRequestHandler):
         except AttributeError as err:
             self._set_response(400)
             print(err)
+        # format attributes as dictionary
         attributeQuery = parse_qs(urlparse(self.path).query)
-        if "processId" in attributeQuery:
-            attributeQuery["processId"] = int(attributeQuery["processId"][0])
+        # TO BE REDONE LATER, THIS IS VERY JANK AND SHITTY
+        # turn into the right value types to be lobbed at processListManager
+        # INT
+        for a in ["processId", "index"]:
+            if a in attributeQuery:
+                attributeQuery[a] = int(attributeQuery[a][0])
+        # STR
+        for a in ["name", "msg", "body"]:
+            if a in attributeQuery:
+                attributeQuery[a] = str(attributeQuery[a][0])
+        # BOOL
+        for a in ["semaStatus"]:
+            if a in attributeQuery:
+                attributeQuery[a] = bool(attributeQuery[a][0])
         getReturn = tempFunc(**attributeQuery)
         self._set_response(200)
         self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
