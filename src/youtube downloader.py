@@ -84,7 +84,6 @@ class httpServer(BaseHTTPRequestHandler):
         
     def do_GET(self):
         #self._set_response()
-        print()
         path = urlparse(self.path).path
         # make sure it's a getter function and get it, other wirse throw an error and return a 400 code
         try:
@@ -97,24 +96,21 @@ class httpServer(BaseHTTPRequestHandler):
             print(err)
         # format attributes as dictionary
         attributeQuery = parse_qs(urlparse(self.path).query)
-        # TO BE REDONE LATER, THIS IS VERY JANK AND SHITTY
         # turn into the right value types to be lobbed at processListManager
-        # INT
-        for a in ["processId", "index"]:
-            if a in attributeQuery:
+        for a in attributeQuery:
+            if attributeQuery[a][0].isdigit() == True:
                 attributeQuery[a] = int(attributeQuery[a][0])
-        # STR
-        for a in ["name", "msg", "body"]:
-            if a in attributeQuery:
-                attributeQuery[a] = str(attributeQuery[a][0])
-        # BOOL
-        for a in ["semaStatus"]:
-            if a in attributeQuery:
+            elif attributeQuery[a][0].lower() in ["true", "false"]:
                 attributeQuery[a] = bool(attributeQuery[a][0])
+            elif attributeQuery[a][0].isdigit() == False:
+                attributeQuery[a] = str(attributeQuery[a][0])
+        print(attributeQuery)
         getReturn = tempFunc(**attributeQuery)
         self._set_response(200)
         self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
 
+    def do_POST(self):
+        pass
 
 class processListManager():
     def __init__(self) -> None:
