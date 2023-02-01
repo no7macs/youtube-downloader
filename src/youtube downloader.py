@@ -96,7 +96,6 @@ class httpServer(BaseHTTPRequestHandler):
         # format attributes as dictionary
         self.attributeQuery = parse_qs(urlparse(self.path).query)
         # turn into the right value types to be lobbed at processListManager
-        print(self.attributeQuery)
         for a in self.attributeQuery:
             if self.attributeQuery[a][0].isdigit() == True:
                 self.attributeQuery[a] = int(self.attributeQuery[a][0])
@@ -123,7 +122,8 @@ class httpServer(BaseHTTPRequestHandler):
         self.setReturn = self.tempFunc(**self.postData)
         self._set_response(200)
         self.wfile.write(json.dumps(self.setReturn).encode("UTF-8"))
-
+        #TODO: have post calls return modified data when the function doesn't have a return itself
+         
 class processListManager():
     def __init__(self) -> None:
         self.processThreadLock = threading.Lock()
@@ -150,9 +150,6 @@ class processListManager():
                 self.processListCache["name"][b[1]] = a
                 self.processListCache["semaStatus"][str(b[2])].append(a)
                 self.processListCache["id"][b[0]] = a
-            #by json dat
-            #by ytdl status
-            #by error codes
     
     def getProcessNum(self) -> int:
         with self.processThreadLock:
