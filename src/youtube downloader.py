@@ -83,11 +83,11 @@ class httpServer(BaseHTTPRequestHandler):
         self.end_headers()
         
     def do_GET(self):
-        self.path = urlparse(self.path).path
+        self.functionPath = urlparse(self.path).path
         # make sure it's a getter function and get it, other wirse throw an error and return a 400 code
         try:
-            if self.path[1:4] == "get":
-                self.tempFunc = getattr(processManager, self.path[1:])
+            if self.functionPath[1:4] == "get":
+                self.tempFunc = getattr(processManager, self.functionPath[1:])
             else:
                 raise AttributeError("not a getter")
         except AttributeError as err:
@@ -96,6 +96,7 @@ class httpServer(BaseHTTPRequestHandler):
         # format attributes as dictionary
         self.attributeQuery = parse_qs(urlparse(self.path).query)
         # turn into the right value types to be lobbed at processListManager
+        print(self.attributeQuery)
         for a in self.attributeQuery:
             if self.attributeQuery[a][0].isdigit() == True:
                 self.attributeQuery[a] = int(self.attributeQuery[a][0])
@@ -103,7 +104,6 @@ class httpServer(BaseHTTPRequestHandler):
                 self.attributeQuery[a] = bool(self.attributeQuery[a][0])
             elif self.attributeQuery[a][0].isdigit() == False:
                 self.attributeQuery[a] = str(self.attributeQuery[a][0])
-        print(self.attributeQuery)
         self.getReturn = self.tempFunc(**self.attributeQuery)
         self._set_response(200)
         self.wfile.write(json.dumps(self.getReturn).encode("UTF-8"))
