@@ -75,7 +75,7 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
-
+#TODO: run the http server in a thread so the main line of execution doesn't get taken up by it
 class httpServer(BaseHTTPRequestHandler):
     def _set_response(self, code) -> None:
         self.send_response(code)
@@ -124,6 +124,7 @@ class httpServer(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(self.setReturn).encode("UTF-8"))
         #TODO: have post calls return modified data when the function doesn't have a return itself
          
+
 class processListManager():
     def __init__(self) -> None:
         self.processThreadLock = threading.Lock()
@@ -142,7 +143,8 @@ class processListManager():
             for a in jsonDat:
                 self.processNum += 1
                 self.processList.append([self.processNum, a, False, jsonDat[a], {}, {"debug":"", "warning":"", "error":""}])
-
+    
+    #TODO: make asyncronous so it can run autonomously
     def cacheProcessList(self) -> None:
         with self.processThreadLock:
             self.processListCache = {"id":{}, "name":{}, "semaStatus":{"True":[], "False":[]}}
@@ -183,6 +185,7 @@ class processListManager():
         with self.processThreadLock:
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
+
 
 if __name__ == "__main__":
     semaphoreSize = 8
