@@ -83,34 +83,46 @@ class httpServer(BaseHTTPRequestHandler):
         self.end_headers()
         
     def do_GET(self):
-        #self._set_response()
-        path = urlparse(self.path).path
+        self.path = urlparse(self.path).path
         # make sure it's a getter function and get it, other wirse throw an error and return a 400 code
         try:
-            if path[1:4] == "get":
-                tempFunc = getattr(processManager, path[1:])
+            if self.path[1:4] == "get":
+                self.tempFunc = getattr(processManager, self.path[1:])
             else:
                 raise AttributeError("not a getter")
         except AttributeError as err:
             self._set_response(400)
             print(err)
         # format attributes as dictionary
-        attributeQuery = parse_qs(urlparse(self.path).query)
+        self.attributeQuery = parse_qs(urlparse(self.path).query)
         # turn into the right value types to be lobbed at processListManager
-        for a in attributeQuery:
-            if attributeQuery[a][0].isdigit() == True:
-                attributeQuery[a] = int(attributeQuery[a][0])
-            elif attributeQuery[a][0].lower() in ["true", "false"]:
-                attributeQuery[a] = bool(attributeQuery[a][0])
-            elif attributeQuery[a][0].isdigit() == False:
-                attributeQuery[a] = str(attributeQuery[a][0])
-        print(attributeQuery)
-        getReturn = tempFunc(**attributeQuery)
+        for a in self.attributeQuery:
+            if self.attributeQuery[a][0].isdigit() == True:
+                self.attributeQuery[a] = int(self.attributeQuery[a][0])
+            elif self.attributeQuery[a][0].lower() in ["true", "false"]:
+                self.attributeQuery[a] = bool(self.attributeQuery[a][0])
+            elif self.attributeQuery[a][0].isdigit() == False:
+                self.attributeQuery[a] = str(self.attributeQuery[a][0])
+        print(self.attributeQuery)
+        self.getReturn = self.tempFunc(**self.attributeQuery)
         self._set_response(200)
-        self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
+        self.wfile.write(json.dumps(self.getReturn).encode("UTF-8"))
 
     def do_POST(self):
-        pass
+        #get the path, turn it into the right function, and make sure everything is right
+        self.path = urlparse(self.path).path
+        try:
+            if self.path[1:4] == "set":
+                self.tempFunc = getattr(processManager, self.path[1:])
+            else:
+                raise AttributeError("not a setter")
+        except AttributeError as err:
+            self._set_response(400)
+            print(err)
+        self.postData = json.loads((self.rfile.read(int(self.headers['Content-Length']))).decode())
+        self.setReturn = self.tempFunc(**self.postData)
+        self._set_response(200)
+        self.wfile.write(json.dumps(self.setReturn).encode("UTF-8"))
 
 class processListManager():
     def __init__(self) -> None:
