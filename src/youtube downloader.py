@@ -75,7 +75,6 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
-#TODO: run the http server in a thread so the main line of execution doesn't get taken up by it
 class httpServer(BaseHTTPRequestHandler):
     def _set_response(self, code) -> None:
         self.send_response(code)
