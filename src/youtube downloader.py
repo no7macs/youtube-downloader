@@ -125,6 +125,14 @@ class httpServer(BaseHTTPRequestHandler):
         #TODO: have post calls return modified data when the function doesn't have a return itself
          
 
+class httpServerThreadManager():
+    def __init__(self, hostName: str, serverPort: int) -> HTTPServer:
+        #TODO: checks if port is open, if not scan for the lowest open between 1024-49151
+        self.hostName = "localhost"
+        self.serverPort = 8000
+        self.httpBackend = HTTPServer((hostName, serverPort), httpServer)
+        self.httpBackend.serve_forever()
+
 class processListManager():
     def __init__(self) -> None:
         self.processThreadLock = threading.Lock()
@@ -199,9 +207,5 @@ if __name__ == "__main__":
         processId = processManager.getProcessByIndex(c)[0]
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
-
-    #TODO: checks if port is open, if not scan for the lowest open between 1024-49151
-    hostName = "localhost"
-    serverPort = 8000
-    httpBackend = HTTPServer((hostName, serverPort), httpServer)
-    httpBackend.serve_forever()
+    httpServ = threading.Thread(target=httpServerThreadManager, args = ("localhost",8000 ), name="HTTPServer")
+    httpServ.start()
