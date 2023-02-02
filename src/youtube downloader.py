@@ -200,6 +200,7 @@ if __name__ == "__main__":
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
 
+    #TODO: checks if port is open, if not scan for the lowest open between 1024-49151
     hostName = "localhost"
     serverPort = 8000
     httpBackend = HTTPServer((hostName, serverPort), httpServer)
