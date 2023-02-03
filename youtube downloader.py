@@ -1,21 +1,63 @@
 from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
 import youtube_dl
 import os
 import json
 import threading
 import gc
-import sys
-import time
+import asyncio
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def execution(sema, processId, processManager):
-    time.sleep(5)
+    def download():
+        # class for logging the YTDL outputs
+        class YTDLLLogger(object):
+            def __init__(self, processId) -> None:
+                self.processId = processId
+            def debug(self, msg) -> None:
+                processManager.setLogMessage(self.processId, "debug", msg)
+            def warning(self, msg) -> None:
+                processManager.setLogMessage(self.processId, "warning", msg)
+            def error(self, msg) -> None:
+                processManager.setLogMessage(self.processId, "error", msg)
+        # progress and current download info
+        folder = processManager.getProcessById(processId)[1]
+        def progressHook(d):
+            processManager.setProcessStatus(processId, body = d)
+        # make extra sub directories
+        os.makedirs(f"""{dir_path}/{folder}""", exist_ok=True)
+        os.makedirs(f"""{dir_path}/{folder}/temp""", exist_ok=True)
+        with open(f"""{dir_path}/{folder}/archive.txt""", mode='a'): pass
+        # youtube-dl confis
+        outDir = dir_path
+        ydl_opts = {
+                    'format': 'bestvideo+bestaudio',
+                    'outtmpl':f"""{outDir}/{folder}/%(title)s-%(id)s.%(ext)s""",
+                    'download_archive':f'{outDir}/{folder}/archive.txt',
+                    'cachedir':f"""{outDir}/{folder}/cache""",
+                    'write-description':True,
+                    'cookiefile':'./youtube.com_cookies.txt',
+                    'merge_output_format':'mkv',
+                    'logger': YTDLLLogger(processId),
+                    'progress_hooks': [progressHook],
+                    }
+        # download videos
+        try:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([processManager.getProcessById(processId)[3]])
+        except Exception as a:
+            print(a)
+            download()
+        #return after finishing
+        return()
     # get sema and mark running value as true
     sema.acquire()
     processManager.setProcessSemaStatus(processId, True)
+    download()
     '''
     if processManager.getProcessById(processId)[2] == False:
         print("checkingsema")
@@ -23,43 +65,8 @@ def execution(sema, processId, processManager):
         processManager.setProcessSemaStatus(processId, True)
     else: pass
     '''
-    # class for logging the YTDL outputs
-    class YTDLLLogger(object):
-        def __init__(self, processId) -> None:
-            self.processId = processId
-        def debug(self, msg) -> None:
-            processManager.setLogMessage(self.processId, "debug", msg)
-        def warning(self, msg) -> None:
-            processManager.setLogMessage(self.processId, "warning", msg)
-        def error(self, msg) -> None:
-            processManager.setLogMessage(self.processId, "error", msg)
-    # progress and current download info
-    folder = processManager.getProcessById(processId)[1]
-    def progressHook(d):
-        processManager.setProcessStatus(processId, body = d)
-    # make extra sub directories
-    os.makedirs(f"""{dir_path}/{folder}""", exist_ok=True)
-    os.makedirs(f"""{dir_path}/{folder}/temp""", exist_ok=True)
-    with open(f"""{dir_path}/{folder}/archive.txt""", mode='a'): pass
-    # youtube-dl confis
-    outDir = dir_path
-    ydl_opts = {
-                'format': 'bestvideo+bestaudio',
-                'outtmpl':f"""{outDir}/{folder}/%(title)s-%(id)s.%(ext)s""",
-                'download_archive':f'{outDir}/{folder}/archive.txt',
-                'cachedir':f"""{outDir}/{folder}/cache""",
-                'write-description':True,
-                'cookiefile':'./youtube.com_cookies.txt',
-                'merge_output_format':'mkv',
-                'logger': YTDLLLogger(processId),
-                'progress_hooks': [progressHook],
-                }
-    # download videos
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([processManager.getProcessById(processId)[3]])
     sema.release()
     gc.collect()
-
     '''
     # remove big webm
     webmFiles = os.listdir(f"""./{folder}/webm/""")
@@ -67,7 +74,6 @@ def execution(sema, processId, processManager):
         if os.path.getsize(f"./{folder}/webm/{b}") >= (1024*1024)*6:
             os.remove(f"""./{folder}/webm/{b}""")
     '''
-
 
 class processListManager():
     def __init__(self) -> None:
@@ -132,13 +138,12 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
-
 if __name__ == "__main__":
-
     semaphoreSize = 8
     processManager = processListManager()
     processManager.buildProcessList(dir_path + '/sources.json')
     processManager.cacheProcessList()
+    
     # start all threads
     sema = threading.Semaphore(semaphoreSize)
     for c in range(0, processManager.getProcessNum()):
