@@ -75,7 +75,6 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
-
 class httpServer(BaseHTTPRequestHandler):
     def _set_response(self, code) -> None:
         self.send_response(code)
@@ -83,24 +82,55 @@ class httpServer(BaseHTTPRequestHandler):
         self.end_headers()
         
     def do_GET(self):
-        #self._set_response()
-        print()
-        path = urlparse(self.path).path
+        self.functionPath = urlparse(self.path).path
+        # make sure it's a getter function and get it, other wirse throw an error and return a 400 code
         try:
-            if path[1:4] == "get":
-                tempFunc = getattr(processManager, path[1:])
+            if self.functionPath[1:4] == "get":
+                self.tempFunc = getattr(processManager, self.functionPath[1:])
             else:
                 raise AttributeError("not a getter")
         except AttributeError as err:
             self._set_response(400)
             print(err)
-        attributeQuery = parse_qs(urlparse(self.path).query)
-        if "processId" in attributeQuery:
-            attributeQuery["processId"] = int(attributeQuery["processId"][0])
-        getReturn = tempFunc(**attributeQuery)
+        # format attributes as dictionary
+        self.attributeQuery = parse_qs(urlparse(self.path).query)
+        # turn into the right value types to be lobbed at processListManager
+        for a in self.attributeQuery:
+            if self.attributeQuery[a][0].isdigit() == True:
+                self.attributeQuery[a] = int(self.attributeQuery[a][0])
+            elif self.attributeQuery[a][0].lower() in ["true", "false"]:
+                self.attributeQuery[a] = bool(self.attributeQuery[a][0])
+            elif self.attributeQuery[a][0].isdigit() == False:
+                self.attributeQuery[a] = str(self.attributeQuery[a][0])
+        self.getReturn = self.tempFunc(**self.attributeQuery)
         self._set_response(200)
-        self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
+        self.wfile.write(json.dumps(self.getReturn).encode("UTF-8"))
 
+    def do_POST(self):
+        #get the path, turn it into the right function, and make sure everything is right
+        self.path = urlparse(self.path).path
+        try:
+            if self.path[1:4] == "set":
+                self.tempFunc = getattr(processManager, self.path[1:])
+            else:
+                raise AttributeError("not a setter")
+        except AttributeError as err:
+            self._set_response(400)
+            print(err)
+        self.postData = json.loads((self.rfile.read(int(self.headers['Content-Length']))).decode())
+        self.setReturn = self.tempFunc(**self.postData)
+        self._set_response(200)
+        self.wfile.write(json.dumps(self.setReturn).encode("UTF-8"))
+        #TODO: have post calls return modified data when the function doesn't have a return itself
+         
+
+class httpServerThreadManager():
+    def __init__(self, hostName: str, serverPort: int) -> HTTPServer:
+        #TODO: checks if port is open, if not scan for the lowest open between 1024-49151
+        self.hostName = "localhost"
+        self.serverPort = 8000
+        self.httpBackend = HTTPServer((hostName, serverPort), httpServer)
+        self.httpBackend.serve_forever()
 
 class processListManager():
     def __init__(self) -> None:
@@ -120,7 +150,8 @@ class processListManager():
             for a in jsonDat:
                 self.processNum += 1
                 self.processList.append([self.processNum, a, False, jsonDat[a], {}, {"debug":"", "warning":"", "error":""}])
-
+    
+    #TODO: make asyncronous so it can run autonomously
     def cacheProcessList(self) -> None:
         with self.processThreadLock:
             self.processListCache = {"id":{}, "name":{}, "semaStatus":{"True":[], "False":[]}}
@@ -128,9 +159,6 @@ class processListManager():
                 self.processListCache["name"][b[1]] = a
                 self.processListCache["semaStatus"][str(b[2])].append(a)
                 self.processListCache["id"][b[0]] = a
-            #by json dat
-            #by ytdl status
-            #by error codes
     
     def getProcessNum(self) -> int:
         with self.processThreadLock:
@@ -165,6 +193,7 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
+
 if __name__ == "__main__":
     semaphoreSize = 8
     processManager = processListManager()
@@ -177,8 +206,5 @@ if __name__ == "__main__":
         processId = processManager.getProcessByIndex(c)[0]
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
-
-    hostName = "localhost"
-    serverPort = 8000
-    httpBackend = HTTPServer((hostName, serverPort), httpServer)
-    httpBackend.serve_forever()
+    httpServ = threading.Thread(target=httpServerThreadManager, args = ("localhost",8000 ), name="HTTPServer")
+    httpServ.start()
