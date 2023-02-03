@@ -75,33 +75,6 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
-
-class httpServer(BaseHTTPRequestHandler):
-    def _set_response(self, code) -> None:
-        self.send_response(code)
-        self.send_header('Content-type', 'text/json')
-        self.end_headers()
-        
-    def do_GET(self):
-        #self._set_response()
-        print()
-        path = urlparse(self.path).path
-        try:
-            if path[1:4] == "get":
-                tempFunc = getattr(processManager, path[1:])
-            else:
-                raise AttributeError("not a getter")
-        except AttributeError as err:
-            self._set_response(400)
-            print(err)
-        attributeQuery = parse_qs(urlparse(self.path).query)
-        if "processId" in attributeQuery:
-            attributeQuery["processId"] = int(attributeQuery["processId"][0])
-        getReturn = tempFunc(**attributeQuery)
-        self._set_response(200)
-        self.wfile.write(json.dumps(getReturn).encode("UTF-8"))
-
-
 class processListManager():
     def __init__(self) -> None:
         self.processThreadLock = threading.Lock()
@@ -177,8 +150,3 @@ if __name__ == "__main__":
         processId = processManager.getProcessByIndex(c)[0]
         p = threading.Thread(target=execution, args = (sema, processId, processManager), name=processId)
         p.start()
-
-    hostName = "localhost"
-    serverPort = 8000
-    httpBackend = HTTPServer((hostName, serverPort), httpServer)
-    httpBackend.serve_forever()
