@@ -49,8 +49,13 @@ def execution(sema, processId, processManager):
         try:
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([processManager.getProcessById(processId)[3]])
+                return()
         except Exception as a:
-            print(a)
+            if str(a) == "ERROR: This channel does not exist.":
+                print(str(processId)+'---'+str(a)+'---skipping')
+            else:
+                print(str(processId) + "-----" + str(a))
+                download()
             download()
         #return after finishing
         return()
