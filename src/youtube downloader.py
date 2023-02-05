@@ -56,8 +56,6 @@ def execution(sema, processId, processManager):
             else:
                 print(str(processId) + "-----" + str(a))
                 download()
-            download()
-        #return after finishing
         return()
     # get sema and mark running value as true
     sema.acquire()
