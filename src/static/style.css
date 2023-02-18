@@ -6,9 +6,6 @@
 	--black: #272727;
     --grey: #747474;
 	--greyLght: #948e8e;
-    --orange: #3E3D53;
-    --yellow: #4d4c52;
-    --green: #232023;
 }
 
 *{
@@ -17,17 +14,46 @@
 	}
     body {
         display: flex;
-        resize: horizontal;
+        flex-flow: column nowrap;
+        justify-content: flex-start;
         }
         header {
             display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
             }
         nav {
             display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
             }
         content {
             display: flex;
+            flex-flow: row nowrap;
+            justify-content: space-around;
             }
+            #filter-list {
+                display: flex;
+                flex-flow: column nowrap;
+                justify-content: space-around;
+                }
+            #transfer-info-container {
+                display: flex;
+                flex-flow: row nowrap;
+                justify-content: space-around;
+                }
+                #transfer-list {
+                    display: flex;
+                    flex-flow: column nowrap;
+                    justify-content: space-around;
+                    }
+                #info-container {
+                    display: flex;
+                    flex-flow: column nowrap;
+                    justify-content: space-around;
+                    }
         footer {
             display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
             }

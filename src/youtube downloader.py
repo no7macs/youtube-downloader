@@ -79,6 +79,7 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
+
 class httpServer(BaseHTTPRequestHandler):
     def _set_response(self, code) -> None:
         self.send_response(code)
@@ -198,6 +199,12 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
+
+app = Flask(__name__)
+@app.route('/')
+def index():
+    return render_template('index.html')
+app.run(debug = True)
 
 if __name__ == "__main__":
     semaphoreSize = 8
