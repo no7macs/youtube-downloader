@@ -1,0 +1,33 @@
+:root {
+	--title: 65px;
+	--heading: 45px;
+	--text: 25px;
+	--textColor: #c5c6d0;
+	--black: #272727;
+    --grey: #747474;
+	--greyLght: #948e8e;
+    --orange: #3E3D53;
+    --yellow: #4d4c52;
+    --green: #232023;
+}
+
+*{
+	font-family: 'PT Sans', sans-serif;
+	transition: all 0.25s;
+	}
+    body {
+        display: flex;
+        resize: horizontal;
+        }
+        header {
+            display: flex;
+            }
+        nav {
+            display: flex;
+            }
+        content {
+            display: flex;
+            }
+        footer {
+            display: flex;
+            }
