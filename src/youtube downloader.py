@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 from concurrent.futures import process
 from logging import exception
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from flask import Flask, render_template
 from urllib.parse import urlparse, parse_qs
 import youtube_dl
 import os
@@ -78,6 +79,7 @@ def execution(sema, processId, processManager):
             os.remove(f"""./{folder}/webm/{b}""")
     '''
 
+
 class httpServer(BaseHTTPRequestHandler):
     def _set_response(self, code) -> None:
         self.send_response(code)
@@ -125,7 +127,7 @@ class httpServer(BaseHTTPRequestHandler):
         self._set_response(200)
         self.wfile.write(json.dumps(self.setReturn).encode("UTF-8"))
         #TODO: have post calls return modified data when the function doesn't have a return itself
-         
+
 
 class httpServerThreadManager():
     def __init__(self, hostName: str, serverPort: int) -> HTTPServer:
@@ -134,6 +136,7 @@ class httpServerThreadManager():
         self.serverPort = 8000
         self.httpBackend = HTTPServer((hostName, serverPort), httpServer)
         self.httpBackend.serve_forever()
+
 
 class processListManager():
     def __init__(self) -> None:
@@ -196,6 +199,12 @@ class processListManager():
             workingProcess = self.getProcessById(processId)
             workingProcess[4] = body
 
+
+app = Flask(__name__)
+@app.route('/')
+def index():
+    return render_template('index.html')
+app.run(debug = True)
 
 if __name__ == "__main__":
     semaphoreSize = 8

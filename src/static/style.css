@@ -1,0 +1,59 @@
+:root {
+	--title: 65px;
+	--heading: 45px;
+	--text: 25px;
+	--textColor: #c5c6d0;
+	--black: #272727;
+    --grey: #747474;
+	--greyLght: #948e8e;
+}
+
+*{
+	font-family: 'PT Sans', sans-serif;
+	transition: all 0.25s;
+	}
+    body {
+        display: flex;
+        flex-flow: column nowrap;
+        justify-content: flex-start;
+        }
+        header {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
+            }
+        nav {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
+            }
+        content {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: space-around;
+            }
+            #filter-list {
+                display: flex;
+                flex-flow: column nowrap;
+                justify-content: space-around;
+                }
+            #transfer-info-container {
+                display: flex;
+                flex-flow: row nowrap;
+                justify-content: space-around;
+                }
+                #transfer-list {
+                    display: flex;
+                    flex-flow: column nowrap;
+                    justify-content: space-around;
+                    }
+                #info-container {
+                    display: flex;
+                    flex-flow: column nowrap;
+                    justify-content: space-around;
+                    }
+        footer {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: flex-start;
+            }
